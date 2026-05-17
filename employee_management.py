@@ -9,6 +9,10 @@ import customtkinter as ctk
 import oracledb
 import csv
 import re
+import matplotlib
+matplotlib.use("TkAgg")
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 # Set modern UI theme
 ctk.set_appearance_mode("Light")
@@ -17,9 +21,9 @@ ctk.set_default_color_theme("blue")
 # ============================================================
 # DATABASE CONFIGURATION 
 # ============================================================
-DB_USER     = " "                   #your username
-DB_PASSWORD = " "                   #your password
-DB_DSN      = " "                   #your dsn (e.g., "localhost/orclpdb1")
+DB_USER     = "system"
+DB_PASSWORD = "Arslanfareed72"
+DB_DSN      = "localhost:1521/orcl"
 
 
 def get_connection():
@@ -34,76 +38,141 @@ def get_connection():
 #  LOGIN WINDOW
 # ============================================================
 class LoginWindow:
+    # Colour palette — identical to the main dashboard
+    _BG       = "#080d18"
+    _PANEL    = "#0d1424"
+    _CARD     = "#101828"
+    _FIELD    = "#141f33"
+    _GOLD     = "#c9a227"
+    _GOLD_DIM = "#8a6d18"
+    _TXT      = "#e8eaf0"
+    _MUTED    = "#4a5568"
+    _ERR      = "#ef4444"
+
+    W, H = 820, 500
+
     def __init__(self, root):
         self.root = root
         self.root.title("System Login")
-        self.root.geometry("400x450")
         self.root.resizable(False, False)
-        self._center_window(400, 450)
+        self._center_window()
         self._build_ui()
 
-    def _center_window(self, w, h):
+    def _center_window(self):
         sw = self.root.winfo_screenwidth()
         sh = self.root.winfo_screenheight()
-        self.root.geometry(f"{w}x{h}+{(sw-w)//2}+{(sh-h)//2}")
+        self.root.geometry(f"{self.W}x{self.H}+{(sw - self.W)//2}+{(sh - self.H)//2}")
 
     def _build_ui(self):
-        bg_frame = ctk.CTkFrame(self.root, fg_color="#F0F2F5", corner_radius=0)
-        bg_frame.pack(fill="both", expand=True)
+        # Outer wrapper fills the CTk root
+        outer = ctk.CTkFrame(self.root, fg_color=self._BG, corner_radius=0)
+        outer.pack(fill="both", expand=True)
 
-        card = ctk.CTkFrame(bg_frame, fg_color="white", corner_radius=15, width=320, height=380)
-        card.place(relx=0.5, rely=0.5, anchor="center")
-        card.pack_propagate(False)
+        # ── LEFT PANEL — geometric canvas art ─────────────────
+        left = tk.Frame(outer, bg=self._PANEL, width=340)
+        left.pack(side="left", fill="y")
+        left.pack_propagate(False)
 
-        ctk.CTkLabel(
-            card, text="Welcome Back",
-            font=ctk.CTkFont(family="Segoe UI", size=24, weight="bold"),
-            text_color="#1f2937"
-        ).pack(pady=(30, 5))
-        
-        ctk.CTkLabel(
-            card, text="Sign in to continue",
-            font=ctk.CTkFont(family="Segoe UI", size=12),
-            text_color="#6b7280"
-        ).pack(pady=(0, 20))
+        canvas = tk.Canvas(left, width=340, height=self.H,
+                           bg=self._PANEL, highlightthickness=0)
+        canvas.pack(fill="both", expand=True)
 
-        # Username Label and Entry
-        ctk.CTkLabel(
-            card, text="Username", 
-            font=ctk.CTkFont(family="Segoe UI", size=12, weight="bold"), 
-            text_color="#4b5563"
-        ).pack(anchor="w", padx=30)
-        
+        # Layered angular polygons
+        canvas.create_polygon(0, 0, 340, 0, 340, 180, 120, 120,
+                              fill="#0a1220", outline="")
+        canvas.create_polygon(0, 160, 220, 220, 340, 340, 340, 500, 0, 500,
+                              fill="#0b1628", outline="")
+        canvas.create_polygon(100, 0, 340, 0, 340, 120,
+                              fill="#0f1e35", outline="")
+        canvas.create_polygon(0, 280, 180, 310, 260, 500, 0, 500,
+                              fill="#0a1422", outline="")
+
+        # Dot grid texture
+        for gy in range(0, self.H + 1, 28):
+            for gx in range(0, 341, 28):
+                canvas.create_oval(gx - 1, gy - 1, gx + 1, gy + 1,
+                                   fill="#1a2e4a", outline="")
+
+        # Gold accent lines
+        canvas.create_line(0, 70, 340, 70, fill=self._GOLD_DIM, width=1)
+        canvas.create_line(30, 420, 310, 420, fill=self._GOLD_DIM, width=1)
+        canvas.create_line(260, 0, 340, 80, fill=self._GOLD, width=2)
+        canvas.create_line(0, 390, 80, 500, fill=self._GOLD, width=2)
+
+        # Brand text
+        canvas.create_text(170, 185, text="EMP",
+                           font=("Segoe UI", 58, "bold"),
+                           fill=self._GOLD, anchor="center")
+        canvas.create_text(170, 248, text="PORTAL",
+                           font=("Segoe UI", 17, "bold"),
+                           fill=self._TXT, anchor="center")
+        canvas.create_text(170, 278, text="Enterprise Management System",
+                           font=("Segoe UI", 9),
+                           fill=self._MUTED, anchor="center")
+        canvas.create_text(170, 390, text="Authorized Personnel Only",
+                           font=("Segoe UI", 8, "italic"),
+                           fill=self._MUTED, anchor="center")
+
+        # Gold vertical separator
+        tk.Frame(outer, bg=self._GOLD, width=2).pack(side="left", fill="y")
+
+        # ── RIGHT PANEL — login form ───────────────────────────
+        right = tk.Frame(outer, bg=self._CARD)
+        right.pack(side="right", fill="both", expand=True)
+
+        form = tk.Frame(right, bg=self._CARD)
+        form.place(relx=0.5, rely=0.5, anchor="center")
+
+        tk.Label(form, text="Welcome Back",
+                 bg=self._CARD, fg=self._TXT,
+                 font=("Segoe UI", 24, "bold")).pack(anchor="w")
+        tk.Label(form, text="Sign in to your account",
+                 bg=self._CARD, fg=self._MUTED,
+                 font=("Segoe UI", 11)).pack(anchor="w", pady=(4, 32))
+
+        # Username
+        tk.Label(form, text="USERNAME",
+                 bg=self._CARD, fg=self._GOLD,
+                 font=("Segoe UI", 8, "bold")).pack(anchor="w")
         self.username_var = tk.StringVar()
-        ctk.CTkEntry(
-            card, textvariable=self.username_var,
-            font=ctk.CTkFont(family="Segoe UI", size=13),
-            width=260, height=40, corner_radius=8, border_width=1
-        ).pack(pady=(2, 10))
+        u_box = tk.Frame(form, bg=self._FIELD)
+        u_box.pack(fill="x", pady=(5, 0))
+        tk.Entry(u_box, textvariable=self.username_var,
+                 bg=self._FIELD, fg=self._TXT,
+                 insertbackground=self._GOLD,
+                 font=("Segoe UI", 13), bd=0, relief="flat",
+                 width=30).pack(padx=14, pady=10)
+        tk.Frame(u_box, bg=self._GOLD, height=2).pack(fill="x")
 
-        # Password Label and Entry
-        ctk.CTkLabel(
-            card, text="Password", 
-            font=ctk.CTkFont(family="Segoe UI", size=12, weight="bold"), 
-            text_color="#4b5563"
-        ).pack(anchor="w", padx=30)
-        
+        # Password
+        tk.Label(form, text="PASSWORD",
+                 bg=self._CARD, fg=self._GOLD,
+                 font=("Segoe UI", 8, "bold")).pack(anchor="w", pady=(20, 0))
         self.password_var = tk.StringVar()
-        ctk.CTkEntry(
-            card, textvariable=self.password_var, show="*",
-            font=ctk.CTkFont(family="Segoe UI", size=13),
-            width=260, height=40, corner_radius=8, border_width=1
-        ).pack(pady=(2, 20))
+        p_box = tk.Frame(form, bg=self._FIELD)
+        p_box.pack(fill="x", pady=(5, 0))
+        tk.Entry(p_box, textvariable=self.password_var, show="*",
+                 bg=self._FIELD, fg=self._TXT,
+                 insertbackground=self._GOLD,
+                 font=("Segoe UI", 13), bd=0, relief="flat",
+                 width=30).pack(padx=14, pady=10)
+        tk.Frame(p_box, bg=self._GOLD, height=2).pack(fill="x")
 
-        ctk.CTkButton(
-            card, text="LOGIN", font=ctk.CTkFont(family="Segoe UI", size=14, weight="bold"),
-            width=260, height=40, corner_radius=8, cursor="hand2",
-            fg_color="#3b82f6", hover_color="#2563eb",
+        # Sign In button
+        tk.Button(
+            form, text="SIGN IN",
+            bg=self._GOLD, fg=self._BG,
+            font=("Segoe UI", 12, "bold"),
+            activebackground="#a8841e", activeforeground=self._BG,
+            bd=0, relief="flat", cursor="hand2",
             command=self._attempt_login
-        ).pack(pady=10)
+        ).pack(fill="x", pady=(28, 0), ipady=12)
 
-        self.status = ctk.CTkLabel(card, text="", text_color="#ef4444", font=ctk.CTkFont(size=12))
-        self.status.pack()
+        # Status / error
+        self.status = tk.Label(form, text="",
+                               bg=self._CARD, fg=self._ERR,
+                               font=("Segoe UI", 10))
+        self.status.pack(pady=(12, 0), anchor="w")
 
         self.root.bind("<Return>", lambda e: self._attempt_login())
 
@@ -153,12 +222,23 @@ class EmployeeManagementApp:
 
         self.root.title("Advanced Employee Management System")
         self.root.geometry("1300x780")
-        self.root.configure(bg="#F0F2F5")
+        self.root.configure(fg_color="#080d18")
         self._center_window(1300, 780)
 
-        self.main_font = ctk.CTkFont(family="Segoe UI", size=13)
-        self.bold_font = ctk.CTkFont(family="Segoe UI", size=13, weight="bold")
-        self.title_font = ctk.CTkFont(family="Segoe UI", size=18, weight="bold")
+        # Shared palette — mirrors the Login page
+        self.C_BG     = "#080d18"
+        self.C_SURF   = "#0d1424"
+        self.C_CARD   = "#101828"
+        self.C_FIELD  = "#141f33"
+        self.C_GOLD   = "#c9a227"
+        self.C_GOLD_H = "#a8841e"
+        self.C_TXT    = "#e8eaf0"
+        self.C_MUTED  = "#4a5568"
+        self.C_BORDER = "#1e3a5f"
+
+        self.main_font  = ctk.CTkFont(family="Segoe UI", size=13)
+        self.bold_font  = ctk.CTkFont(family="Segoe UI", size=13, weight="bold")
+        self.title_font = ctk.CTkFont(family="Segoe UI", size=15, weight="bold")
 
         self._style_treeview()
         self._build_ui()
@@ -173,107 +253,193 @@ class EmployeeManagementApp:
         style = ttk.Style()
         style.theme_use("clam")
         style.configure(
-            "Treeview", 
-            background="#ffffff", foreground="#1f2937", 
-            rowheight=35, fieldbackground="#ffffff", 
+            "Treeview",
+            background="#0d1424", foreground="#e8eaf0",
+            rowheight=32, fieldbackground="#0d1424",
             borderwidth=0, font=("Segoe UI", 11)
         )
-        style.map("Treeview", background=[("selected", "#3b82f6")], foreground=[("selected", "white")])
-        style.configure(
-            "Treeview.Heading", font=("Segoe UI", 12, "bold"), 
-            background="#f3f4f6", foreground="#374151", borderwidth=0, padding=5
+        style.map(
+            "Treeview",
+            background=[("selected", "#c9a227")],
+            foreground=[("selected", "#080d18")]
         )
+        style.configure(
+            "Treeview.Heading",
+            font=("Segoe UI", 11, "bold"),
+            background="#080d18", foreground="#c9a227",
+            borderwidth=0, padding=6
+        )
+        style.map("Treeview.Heading", background=[("active", "#141f33")])
 
     def _build_ui(self):
         self._build_header()
 
-        content = ctk.CTkFrame(self.root, fg_color="#F0F2F5", corner_radius=0)
-        content.pack(fill="both", expand=True, padx=20, pady=15)
+        content = ctk.CTkFrame(self.root, fg_color=self.C_BG, corner_radius=0)
+        content.pack(fill="both", expand=True, padx=16, pady=12)
 
         self._build_left_panel(content)
         self._build_right_panel(content)
         self._build_statusbar()
 
     def _build_header(self):
-        hdr = ctk.CTkFrame(self.root, height=65, fg_color="#1f2937", corner_radius=0)
+        hdr = tk.Frame(self.root, bg="#0d1424", height=62)
         hdr.pack(fill="x")
         hdr.pack_propagate(False)
 
-        ctk.CTkLabel(
-            hdr, text="Enterprise Employee Portal",
-            font=ctk.CTkFont(family="Segoe UI", size=20, weight="bold"), 
-            text_color="white"
-        ).pack(side="left", padx=20)
+        # Left: gold slash + title
+        left_hdr = tk.Frame(hdr, bg="#0d1424")
+        left_hdr.pack(side="left", fill="y", padx=(0, 0))
 
-        ctk.CTkButton(
-            hdr, text="Log Out", font=ctk.CTkFont(family="Segoe UI", size=12, weight="bold"),
-            fg_color="#ef4444", hover_color="#dc2626", width=80, height=30,
+        # Gold vertical accent bar
+        tk.Frame(left_hdr, bg=self.C_GOLD, width=4).pack(side="left", fill="y")
+
+        tk.Label(
+            left_hdr, text="  Enterprise Employee Portal",
+            bg="#0d1424", fg=self.C_TXT,
+            font=("Segoe UI", 17, "bold")
+        ).pack(side="left", padx=(10, 0), pady=12)
+
+        # Right: user info + logout
+        right_hdr = tk.Frame(hdr, bg="#0d1424")
+        right_hdr.pack(side="right", fill="y", padx=16)
+
+        logout_btn = tk.Button(
+            right_hdr, text="Log Out",
+            bg="#b91c1c", fg=self.C_TXT,
+            font=("Segoe UI", 10, "bold"),
+            activebackground="#991b1b", activeforeground=self.C_TXT,
+            bd=0, relief="flat", cursor="hand2",
             command=self._logout
-        ).pack(side="right", padx=(10, 20))
+        )
+        logout_btn.pack(side="right", padx=(10, 0), pady=16, ipady=4, ipadx=10)
 
-        role_color = "#10b981" if self.is_admin else "#f59e0b"
-        ctk.CTkLabel(
-            hdr,
-            text=f"Logged in as: {self.username}  |  Role: {self.role}  ",
-            font=ctk.CTkFont(family="Segoe UI", size=14, weight="bold"), 
-            text_color=role_color
-        ).pack(side="right")
+        role_color = self.C_GOLD if self.is_admin else "#94a3b8"
+        tk.Label(
+            right_hdr,
+            text=f"Logged in as: {self.username}   |   Role: {self.role}",
+            bg="#0d1424", fg=role_color,
+            font=("Segoe UI", 11, "bold")
+        ).pack(side="right", pady=12)
+
+        # Bottom gold rule
+        tk.Frame(self.root, bg=self.C_GOLD, height=2).pack(fill="x")
 
     def _build_left_panel(self, parent):
-        left = ctk.CTkFrame(parent, fg_color="#F0F2F5", width=360)
-        left.pack(side="left", fill="y", padx=(0, 20))
+        left = ctk.CTkFrame(parent, fg_color=self.C_BG, width=355)
+        left.pack(side="left", fill="y", padx=(0, 14))
         left.pack_propagate(False)
 
-        detail_frm = ctk.CTkFrame(left, fg_color="white", corner_radius=12)
-        detail_frm.pack(fill="x", pady=(0, 15), ipady=10)
+        # ── Employee Details card ──────────────────────────────
+        detail_frm = ctk.CTkFrame(left, fg_color=self.C_SURF, corner_radius=10)
+        detail_frm.pack(fill="x", pady=(0, 12), ipady=6)
 
-        ctk.CTkLabel(detail_frm, text="Employee Details", font=self.title_font, text_color="#111827").pack(anchor="w", padx=20, pady=(15, 10))
+        # Card title with gold left border simulation
+        title_row = tk.Frame(detail_frm, bg=self.C_SURF)
+        title_row.pack(anchor="w", padx=16, pady=(14, 8), fill="x")
+        tk.Frame(title_row, bg=self.C_GOLD, width=3).pack(side="left", fill="y")
+        tk.Label(
+            title_row, text="  Employee Details",
+            bg=self.C_SURF, fg=self.C_TXT,
+            font=("Segoe UI", 13, "bold")
+        ).pack(side="left")
 
         fields_frm = ctk.CTkFrame(detail_frm, fg_color="transparent")
-        fields_frm.pack(fill="x", padx=20)
+        fields_frm.pack(fill="x", padx=16)
 
         labels = ["Employee ID", "Full Name", "Department", "Salary", "Contact"]
         attrs  = ["eid", "ename", "edept", "esalary", "econtact"]
 
         for i, (lbl, attr) in enumerate(zip(labels, attrs)):
-            ctk.CTkLabel(fields_frm, text=lbl, font=self.bold_font, text_color="#4b5563").grid(row=i, column=0, sticky="w", pady=8, padx=(0,10))
+            ctk.CTkLabel(
+                fields_frm, text=lbl, font=self.bold_font,
+                text_color=self.C_GOLD
+            ).grid(row=i, column=0, sticky="w", pady=6, padx=(0, 10))
             var = tk.StringVar()
             setattr(self, f"{attr}_var", var)
-            entry = ctk.CTkEntry(fields_frm, textvariable=var, font=self.main_font, width=200, height=32, corner_radius=6, border_width=1)
-            entry.grid(row=i, column=1, pady=8)
+            entry = ctk.CTkEntry(
+                fields_frm, textvariable=var, font=self.main_font,
+                width=200, height=32, corner_radius=6,
+                fg_color=self.C_FIELD, text_color=self.C_TXT,
+                border_color=self.C_BORDER, border_width=1
+            )
+            entry.grid(row=i, column=1, pady=6)
             setattr(self, f"{attr}_entry", entry)
 
-        ctk.CTkLabel(fields_frm, text="Gender", font=self.bold_font, text_color="#4b5563").grid(row=5, column=0, sticky="w", pady=8, padx=(0,10))
+        ctk.CTkLabel(
+            fields_frm, text="Gender", font=self.bold_font,
+            text_color=self.C_GOLD
+        ).grid(row=5, column=0, sticky="w", pady=6, padx=(0, 10))
         self.egender_var = tk.StringVar()
         self.egender_cb  = ctk.CTkComboBox(
             fields_frm, variable=self.egender_var,
             values=["Male", "Female", "Other"],
-            font=self.main_font, width=200, height=32, corner_radius=6, border_width=1, state="readonly"
+            font=self.main_font, width=200, height=32, corner_radius=6,
+            fg_color=self.C_FIELD, text_color=self.C_TXT,
+            button_color=self.C_GOLD, button_hover_color=self.C_GOLD_H,
+            border_color=self.C_BORDER, border_width=1, state="readonly"
         )
-        self.egender_cb.grid(row=5, column=1, pady=8)
+        self.egender_cb.grid(row=5, column=1, pady=6)
 
-        sf = ctk.CTkFrame(left, fg_color="white", corner_radius=12)
-        sf.pack(fill="x", pady=(0, 15), ipady=10)
+        # ── Smart Filters & Sorting card ──────────────────────
+        sf = ctk.CTkFrame(left, fg_color=self.C_SURF, corner_radius=10)
+        sf.pack(fill="x", pady=(0, 12), ipady=6)
 
-        ctk.CTkLabel(sf, text="Smart Filters & Sorting", font=self.title_font, text_color="#111827").pack(anchor="w", padx=20, pady=(15, 10))
-        
+        title_row2 = tk.Frame(sf, bg=self.C_SURF)
+        title_row2.pack(anchor="w", padx=16, pady=(14, 8), fill="x")
+        tk.Frame(title_row2, bg=self.C_GOLD, width=3).pack(side="left", fill="y")
+        tk.Label(
+            title_row2, text="  Smart Filters & Sorting",
+            bg=self.C_SURF, fg=self.C_TXT,
+            font=("Segoe UI", 13, "bold")
+        ).pack(side="left")
+
         sf_grid = ctk.CTkFrame(sf, fg_color="transparent")
-        sf_grid.pack(fill="x", padx=20)
+        sf_grid.pack(fill="x", padx=16)
 
-        ctk.CTkLabel(sf_grid, text="Min Sal:", font=self.main_font, text_color="#4b5563").grid(row=0, column=0, sticky="w", pady=5)
+        ctk.CTkLabel(
+            sf_grid, text="Min Salary:", font=self.main_font, text_color=self.C_GOLD
+        ).grid(row=0, column=0, sticky="w", pady=5)
         self.min_sal_var = tk.StringVar()
-        ctk.CTkEntry(sf_grid, textvariable=self.min_sal_var, font=self.main_font, width=100, height=30, corner_radius=6).grid(row=0, column=1, pady=5, padx=(5,15))
+        ctk.CTkEntry(
+            sf_grid, textvariable=self.min_sal_var, font=self.main_font,
+            width=98, height=30, corner_radius=6,
+            fg_color=self.C_FIELD, text_color=self.C_TXT,
+            border_color=self.C_BORDER, border_width=1
+        ).grid(row=0, column=1, pady=5, padx=(5, 14))
 
-        ctk.CTkLabel(sf_grid, text="Max Sal:", font=self.main_font, text_color="#4b5563").grid(row=0, column=2, sticky="w", pady=5)
+        ctk.CTkLabel(
+            sf_grid, text="Max Salary:", font=self.main_font, text_color=self.C_GOLD
+        ).grid(row=0, column=2, sticky="w", pady=5)
         self.max_sal_var = tk.StringVar()
-        ctk.CTkEntry(sf_grid, textvariable=self.max_sal_var, font=self.main_font, width=100, height=30, corner_radius=6).grid(row=0, column=3, pady=5, padx=(5,0))
+        ctk.CTkEntry(
+            sf_grid, textvariable=self.max_sal_var, font=self.main_font,
+            width=98, height=30, corner_radius=6,
+            fg_color=self.C_FIELD, text_color=self.C_TXT,
+            border_color=self.C_BORDER, border_width=1
+        ).grid(row=0, column=3, pady=5, padx=(5, 0))
 
         self.sort_col_var = tk.StringVar(value="Name")
         self.sort_ord_var = tk.StringVar(value="ASC")
 
-        ctk.CTkLabel(sf_grid, text="Sort By:", font=self.main_font, text_color="#4b5563").grid(row=1, column=0, sticky="w", pady=10)
-        ctk.CTkComboBox(sf_grid, variable=self.sort_col_var, values=["ID", "Name", "Salary", "Department"], width=100, height=30, state="readonly").grid(row=1, column=1, padx=(5,15), pady=10)
-        ctk.CTkComboBox(sf_grid, variable=self.sort_ord_var, values=["ASC", "DESC"], width=100, height=30, state="readonly").grid(row=1, column=2, columnspan=2, sticky="w", padx=5, pady=10)
+        ctk.CTkLabel(
+            sf_grid, text="Sort By:", font=self.main_font, text_color=self.C_GOLD
+        ).grid(row=1, column=0, sticky="w", pady=10)
+        ctk.CTkComboBox(
+            sf_grid, variable=self.sort_col_var,
+            values=["ID", "Name", "Salary", "Department"],
+            width=98, height=30, state="readonly",
+            fg_color=self.C_FIELD, text_color=self.C_TXT,
+            button_color=self.C_GOLD, button_hover_color=self.C_GOLD_H,
+            border_color=self.C_BORDER, border_width=1
+        ).grid(row=1, column=1, padx=(5, 14), pady=10)
+        ctk.CTkComboBox(
+            sf_grid, variable=self.sort_ord_var,
+            values=["ASC", "DESC"],
+            width=98, height=30, state="readonly",
+            fg_color=self.C_FIELD, text_color=self.C_TXT,
+            button_color=self.C_GOLD, button_hover_color=self.C_GOLD_H,
+            border_color=self.C_BORDER, border_width=1
+        ).grid(row=1, column=2, columnspan=2, sticky="w", padx=5, pady=10)
 
         self.ename_var.trace_add("write", lambda *_: self._smart_search(False))
         self.edept_var.trace_add("write", lambda *_: self._smart_search(False))
@@ -284,14 +450,14 @@ class EmployeeManagementApp:
 
         self._build_buttons(right_wrapper)
 
-        tree_card = ctk.CTkFrame(right_wrapper, fg_color="white", corner_radius=12)
+        tree_card = ctk.CTkFrame(right_wrapper, fg_color=self.C_SURF, corner_radius=10)
         tree_card.pack(fill="both", expand=True)
 
-        cols = ("ID", "Name", "Department", "Gender", "Salary", "Contact")
+        cols   = ("ID", "Name", "Department", "Gender", "Salary", "Contact")
         widths = (70, 160, 140, 90, 120, 140)
 
-        tree_frame = tk.Frame(tree_card, bg="white")
-        tree_frame.pack(fill="both", expand=True, padx=15, pady=15)
+        tree_frame = tk.Frame(tree_card, bg=self.C_SURF)
+        tree_frame.pack(fill="both", expand=True, padx=12, pady=12)
 
         self.tree = ttk.Treeview(tree_frame, columns=cols, show="headings", height=26)
         vsb = ttk.Scrollbar(tree_frame, orient="vertical", command=self.tree.yview)
@@ -304,9 +470,10 @@ class EmployeeManagementApp:
         vsb.pack(side="right", fill="y")
         self.tree.pack(fill="both", expand=True)
 
-        self.tree.tag_configure("high",   background="#d1fae5")
-        self.tree.tag_configure("low",    background="#fee2e2")
-        self.tree.tag_configure("normal", background="#ffffff")
+        # Row highlighting — dark tinted (high salary = dark green, low = dark red)
+        self.tree.tag_configure("high",   background="#0f2d1a", foreground="#6ee7a0")
+        self.tree.tag_configure("low",    background="#2d0f0f", foreground="#fca5a5")
+        self.tree.tag_configure("normal", background="#0d1424", foreground="#e8eaf0")
 
         self.tree.bind("<<TreeviewSelect>>", self._on_row_select)
 
@@ -314,50 +481,68 @@ class EmployeeManagementApp:
         self._hdr_sort_order = "ASC"
 
     def _build_buttons(self, parent):
-        btn_frm = ctk.CTkFrame(parent, fg_color="white", corner_radius=12)
-        btn_frm.pack(fill="x", pady=(0, 15), ipady=5)
-        
-        ctk.CTkLabel(btn_frm, text="Quick Actions", font=self.title_font, text_color="#111827").pack(anchor="w", padx=20, pady=(10, 5))
+        btn_frm = ctk.CTkFrame(parent, fg_color=self.C_SURF, corner_radius=10)
+        btn_frm.pack(fill="x", pady=(0, 12), ipady=6)
+
+        title_row = tk.Frame(btn_frm, bg=self.C_SURF)
+        title_row.pack(anchor="w", padx=16, pady=(12, 6), fill="x")
+        tk.Frame(title_row, bg=self.C_GOLD, width=3).pack(side="left", fill="y")
+        tk.Label(
+            title_row, text="  Quick Actions",
+            bg=self.C_SURF, fg=self.C_TXT,
+            font=("Segoe UI", 13, "bold")
+        ).pack(side="left")
 
         grid_frm = ctk.CTkFrame(btn_frm, fg_color="transparent")
         grid_frm.pack(anchor="center", pady=(0, 10))
 
+        # (label, command, active_color, hover_color, text_color, admin_only)
         buttons = [
-            ("Insert",       self._insert,          "#10b981", "#059669", True),
-            ("Update",       self._update,          "#3b82f6", "#2563eb", True),
-            ("Delete",       self._delete,          "#ef4444", "#dc2626", True),
-            ("Search",       self._smart_search,    "#8b5cf6", "#7c3aed", False),
-            ("Show All",     self._load_all,        "#0ea5e9", "#0284c7", False),
-            ("Statistics",   self._show_statistics, "#f59e0b", "#d97706", False),
-            ("Export CSV",   self._export_csv,      "#4b5563", "#374151", True),
-            ("Export TXT",   self._export_txt,      "#4b5563", "#374151", True),
-            ("Clear",        self._clear_form,      "#9ca3af", "#6b7280", False),
-            ("Manage Users", self._manage_users,    "#1f2937", "#111827", True),
+            ("Insert",       self._insert,          "#15803d", "#166534", self.C_TXT,  True),
+            ("Update",       self._update,          "#1d4ed8", "#1e3a8a", self.C_TXT,  True),
+            ("Delete",       self._delete,          "#b91c1c", "#991b1b", self.C_TXT,  True),
+            ("Search",       self._smart_search,    "#5b21b6", "#4c1d95", self.C_TXT,  False),
+            ("Show All",     self._load_all,        "#0369a1", "#075985", self.C_TXT,  False),
+            ("Statistics",   self._show_statistics, self.C_GOLD, self.C_GOLD_H, "#080d18", False),
+            ("Export CSV",   self._export_csv,      "#334155", "#1e293b", self.C_TXT,  True),
+            ("Export TXT",   self._export_txt,      "#334155", "#1e293b", self.C_TXT,  True),
+            ("Clear",        self._clear_form,      "#374151", "#1f2937", "#94a3b8",   False),
+            ("Manage Users", self._manage_users,    "#0d1424", "#0a0f1c", self.C_GOLD, True),
         ]
 
-        for i, (text, cmd, color, hover, admin_only) in enumerate(buttons):
+        for i, (text, cmd, color, hover, txt_col, admin_only) in enumerate(buttons):
             state = "normal" if (not admin_only or self.is_admin) else "disabled"
-            
             ctk.CTkButton(
                 grid_frm, text=text, command=cmd,
-                font=self.bold_font, text_color="white",
-                fg_color=color if state == "normal" else "#d1d5db", 
-                hover_color=hover if state == "normal" else "#d1d5db",
-                width=135, height=36, corner_radius=8,
+                font=self.bold_font,
+                text_color=txt_col if state == "normal" else "#4a5568",
+                fg_color=color if state == "normal" else "#141f33",
+                hover_color=hover if state == "normal" else "#141f33",
+                border_color=self.C_BORDER if state == "disabled" else color,
+                border_width=1 if state == "disabled" else 0,
+                width=138, height=36, corner_radius=7,
                 cursor="hand2" if state == "normal" else "arrow",
                 state=state
-            ).grid(row=i // 5, column=i % 5, padx=8, pady=6)
+            ).grid(row=i // 5, column=i % 5, padx=7, pady=5)
 
     def _build_statusbar(self):
-        status_frm = ctk.CTkFrame(self.root, height=40, fg_color="#e5e7eb", corner_radius=0)
+        # Gold rule above status bar
+        tk.Frame(self.root, bg=self.C_GOLD, height=1).pack(fill="x", side="bottom")
+
+        status_frm = tk.Frame(self.root, bg="#0d1424", height=36)
         status_frm.pack(fill="x", side="bottom")
         status_frm.pack_propagate(False)
 
+        # Left accent bar
+        tk.Frame(status_frm, bg=self.C_GOLD, width=4).pack(side="left", fill="y")
+
         self.status_var = tk.StringVar(value="System Ready")
-        ctk.CTkLabel(
+        tk.Label(
             status_frm, textvariable=self.status_var,
-            font=self.bold_font, text_color="#059669", anchor="w"
-        ).pack(side="left", padx=20, pady=8)
+            bg="#0d1424", fg="#6ee7a0",
+            font=("Segoe UI", 10, "bold"),
+            anchor="w"
+        ).pack(side="left", padx=12, pady=8)
 
     # ─────────────────────────────────────────────────────────
     #  LOGOUT & USER MANAGEMENT
@@ -372,28 +557,51 @@ class EmployeeManagementApp:
     def _manage_users(self):
         win = ctk.CTkToplevel(self.root)
         win.title("User Access Management")
-        win.geometry("450x650")
-        win.configure(bg="#F0F2F5")
+        win.geometry("460x660")
+        win.configure(fg_color=self.C_BG)
         win.attributes("-topmost", True)
 
-        # ── CREATE USER SECTION ──
-        ctk.CTkLabel(win, text="Create New User", font=self.title_font, text_color="#1f2937").pack(pady=(20, 10))
+        # ── CREATE USER SECTION ──────────────────────────────
+        title_row = tk.Frame(win, bg=self.C_BG)
+        title_row.pack(anchor="w", padx=24, pady=(20, 10), fill="x")
+        tk.Frame(title_row, bg=self.C_GOLD, width=3).pack(side="left", fill="y")
+        tk.Label(
+            title_row, text="  Create New User",
+            bg=self.C_BG, fg=self.C_TXT,
+            font=("Segoe UI", 13, "bold")
+        ).pack(side="left")
 
-        create_card = ctk.CTkFrame(win, fg_color="white", corner_radius=12)
-        create_card.pack(fill="x", padx=20, pady=(0, 20))
+        create_card = ctk.CTkFrame(win, fg_color=self.C_SURF, corner_radius=10)
+        create_card.pack(fill="x", padx=20, pady=(0, 20), ipady=6)
 
         new_uname = tk.StringVar()
-        new_pwd = tk.StringVar()
-        new_role = tk.StringVar(value="USER")
+        new_pwd   = tk.StringVar()
+        new_role  = tk.StringVar(value="USER")
 
-        ctk.CTkLabel(create_card, text="New Username", font=self.bold_font, text_color="#4b5563").pack(anchor="w", padx=80, pady=(15, 0))
-        ctk.CTkEntry(create_card, textvariable=new_uname, width=250).pack(pady=(2, 10))
-        
-        ctk.CTkLabel(create_card, text="New Password", font=self.bold_font, text_color="#4b5563").pack(anchor="w", padx=80)
-        ctk.CTkEntry(create_card, textvariable=new_pwd, show="*", width=250).pack(pady=(2, 10))
-        
-        ctk.CTkLabel(create_card, text="Assign Role", font=self.bold_font, text_color="#4b5563").pack(anchor="w", padx=80)
-        ctk.CTkComboBox(create_card, variable=new_role, values=["ADMIN", "USER"], width=250, state="readonly").pack(pady=(2, 10))
+        for lbl, var, masked in [
+            ("New Username", new_uname, False),
+            ("New Password", new_pwd,   True),
+        ]:
+            ctk.CTkLabel(
+                create_card, text=lbl, font=self.bold_font, text_color=self.C_GOLD
+            ).pack(anchor="w", padx=24, pady=(10, 0))
+            ctk.CTkEntry(
+                create_card, textvariable=var, width=280,
+                show="*" if masked else "",
+                fg_color=self.C_FIELD, text_color=self.C_TXT,
+                border_color=self.C_BORDER, border_width=1, corner_radius=6
+            ).pack(pady=(4, 0))
+
+        ctk.CTkLabel(
+            create_card, text="Assign Role", font=self.bold_font, text_color=self.C_GOLD
+        ).pack(anchor="w", padx=24, pady=(10, 0))
+        ctk.CTkComboBox(
+            create_card, variable=new_role, values=["ADMIN", "USER"],
+            width=280, state="readonly",
+            fg_color=self.C_FIELD, text_color=self.C_TXT,
+            button_color=self.C_GOLD, button_hover_color=self.C_GOLD_H,
+            border_color=self.C_BORDER, border_width=1, corner_radius=6
+        ).pack(pady=(4, 0))
 
         def save_user():
             u = new_uname.get().strip()
@@ -424,19 +632,37 @@ class EmployeeManagementApp:
             finally:
                 conn.close()
 
-        ctk.CTkButton(create_card, text="Save User", font=self.bold_font, fg_color="#10b981", hover_color="#059669", command=save_user).pack(pady=(10, 20))
+        ctk.CTkButton(
+            create_card, text="Save User", font=self.bold_font,
+            fg_color="#15803d", hover_color="#166534", text_color=self.C_TXT,
+            corner_radius=7, command=save_user
+        ).pack(pady=(12, 18))
 
-        # ── REMOVE USER SECTION ──
-        ctk.CTkLabel(win, text="Remove User", font=self.title_font, text_color="#1f2937").pack(pady=(10, 10))
+        # ── REMOVE USER SECTION ─────────────────────────────
+        title_row2 = tk.Frame(win, bg=self.C_BG)
+        title_row2.pack(anchor="w", padx=24, pady=(0, 10), fill="x")
+        tk.Frame(title_row2, bg=self.C_GOLD, width=3).pack(side="left", fill="y")
+        tk.Label(
+            title_row2, text="  Remove User",
+            bg=self.C_BG, fg=self.C_TXT,
+            font=("Segoe UI", 13, "bold")
+        ).pack(side="left")
 
-        delete_card = ctk.CTkFrame(win, fg_color="white", corner_radius=12)
-        delete_card.pack(fill="x", padx=20, pady=(0, 20))
+        delete_card = ctk.CTkFrame(win, fg_color=self.C_SURF, corner_radius=10)
+        delete_card.pack(fill="x", padx=20, pady=(0, 20), ipady=6)
 
         del_uname = tk.StringVar()
-        
-        ctk.CTkLabel(delete_card, text="Select standard User to remove", font=self.bold_font, text_color="#4b5563").pack(anchor="w", padx=80, pady=(15, 0))
-        user_cb = ctk.CTkComboBox(delete_card, variable=del_uname, width=250, state="readonly")
-        user_cb.pack(pady=(2, 10))
+
+        ctk.CTkLabel(
+            delete_card, text="Select User to Remove", font=self.bold_font, text_color=self.C_GOLD
+        ).pack(anchor="w", padx=24, pady=(12, 0))
+        user_cb = ctk.CTkComboBox(
+            delete_card, variable=del_uname, width=280, state="readonly",
+            fg_color=self.C_FIELD, text_color=self.C_TXT,
+            button_color=self.C_GOLD, button_hover_color=self.C_GOLD_H,
+            border_color=self.C_BORDER, border_width=1, corner_radius=6
+        )
+        user_cb.pack(pady=(4, 0))
 
         def refresh_user_list():
             conn = get_connection()
@@ -487,7 +713,11 @@ class EmployeeManagementApp:
             finally:
                 conn.close()
 
-        ctk.CTkButton(delete_card, text="Delete User", font=self.bold_font, fg_color="#ef4444", hover_color="#dc2626", command=delete_user).pack(pady=(10, 20))
+        ctk.CTkButton(
+            delete_card, text="Delete User", font=self.bold_font,
+            fg_color="#b91c1c", hover_color="#991b1b", text_color=self.C_TXT,
+            corner_radius=7, command=delete_user
+        ).pack(pady=(12, 18))
 
         # Initialize the dropdown menu
         refresh_user_list()
@@ -765,49 +995,313 @@ class EmployeeManagementApp:
     # ─────────────────────────────────────────────────────────
     def _show_statistics(self):
         conn = get_connection()
-        if not conn: return
+        if not conn:
+            return
         try:
             cur = conn.cursor()
-            cur.execute("SELECT MAX(salary), MIN(salary), AVG(salary), SUM(salary) FROM employees")
+
+            # Salary overview
+            cur.execute(
+                "SELECT MAX(salary), MIN(salary), AVG(salary), SUM(salary) FROM employees"
+            )
             max_s, min_s, avg_s, sum_s = cur.fetchone()
 
-            cur.execute("SELECT department, COUNT(*) FROM employees GROUP BY department ORDER BY department")
+            # Department headcount
+            cur.execute(
+                "SELECT department, COUNT(*) FROM employees "
+                "GROUP BY department ORDER BY department"
+            )
             dept_rows = cur.fetchall()
+
+            # Average salary per department
+            cur.execute(
+                "SELECT department, AVG(salary) FROM employees "
+                "GROUP BY department ORDER BY AVG(salary) DESC"
+            )
+            dept_avg_rows = cur.fetchall()
+
+            # Gender distribution
+            cur.execute(
+                "SELECT gender, COUNT(*) FROM employees GROUP BY gender"
+            )
+            gender_rows = cur.fetchall()
+
+            # Top 5 earners
+            cur.execute(
+                "SELECT name, salary FROM employees "
+                "ORDER BY salary DESC FETCH FIRST 5 ROWS ONLY"
+            )
+            top5_rows = cur.fetchall()
+
+            # Salary bands
+            cur.execute(
+                "SELECT "
+                "  SUM(CASE WHEN salary < 100000 THEN 1 ELSE 0 END), "
+                "  SUM(CASE WHEN salary BETWEEN 100000 AND 200000 THEN 1 ELSE 0 END), "
+                "  SUM(CASE WHEN salary BETWEEN 200001 AND 300000 THEN 1 ELSE 0 END), "
+                "  SUM(CASE WHEN salary > 300000 THEN 1 ELSE 0 END) "
+                "FROM employees"
+            )
+            bands = cur.fetchone()
+
         except oracledb.DatabaseError as e:
             messagebox.showerror("DB Error", str(e))
             return
         finally:
             conn.close()
 
+        # ── Window setup ──────────────────────────────────────
         win = ctk.CTkToplevel(self.root)
         win.title("Analytics Dashboard")
-        win.geometry("500x550")
-        win.configure(bg="#F0F2F5")
+        win.geometry("1060x760")
+        win.configure(fg_color=self.C_BG)
         win.attributes("-topmost", True)
+        win.resizable(True, True)
 
-        ctk.CTkLabel(win, text="Salary Statistics", font=ctk.CTkFont(size=20, weight="bold"), text_color="#1f2937").pack(pady=(25, 15))
+        # Scrollable canvas so nothing gets cut off
+        outer_canvas = tk.Canvas(win, bg=self.C_BG, highlightthickness=0)
+        scrollbar    = ttk.Scrollbar(win, orient="vertical",
+                                     command=outer_canvas.yview)
+        outer_canvas.configure(yscrollcommand=scrollbar.set)
+        scrollbar.pack(side="right", fill="y")
+        outer_canvas.pack(side="left", fill="both", expand=True)
 
-        def fmt(val): return f"PKR {val:,.2f}" if val is not None else "N/A"
+        scroll_frame = tk.Frame(outer_canvas, bg=self.C_BG)
+        scroll_win   = outer_canvas.create_window((0, 0), window=scroll_frame,
+                                                  anchor="nw")
 
-        card1 = ctk.CTkFrame(win, fg_color="white", corner_radius=12)
-        card1.pack(fill="x", padx=30, pady=10, ipady=10)
+        def _on_resize(event):
+            outer_canvas.itemconfig(scroll_win, width=event.width)
+        def _on_frame_configure(event):
+            outer_canvas.configure(scrollregion=outer_canvas.bbox("all"))
 
-        for label, value in [("Highest Salary", fmt(max_s)), ("Lowest Salary", fmt(min_s)), ("Average Salary", fmt(avg_s)), ("Total Expense", fmt(sum_s))]:
-            row = ctk.CTkFrame(card1, fg_color="transparent")
-            row.pack(fill="x", padx=20, pady=5)
-            ctk.CTkLabel(row, text=label, font=self.main_font, text_color="#6b7280").pack(side="left")
-            ctk.CTkLabel(row, text=value, font=self.bold_font, text_color="#1f2937").pack(side="right")
+        outer_canvas.bind("<Configure>", _on_resize)
+        scroll_frame.bind("<Configure>", _on_frame_configure)
+        win.bind("<MouseWheel>",
+                 lambda e: outer_canvas.yview_scroll(-1*(e.delta//120), "units"))
 
-        ctk.CTkLabel(win, text="Department Count", font=ctk.CTkFont(size=20, weight="bold"), text_color="#1f2937").pack(pady=(20, 15))
-        
-        card2 = ctk.CTkFrame(win, fg_color="white", corner_radius=12)
-        card2.pack(fill="x", padx=30, pady=10, ipady=10)
+        # ── Shared chart style helpers ────────────────────────
+        BG   = self.C_BG
+        SURF = self.C_SURF
+        GOLD = self.C_GOLD
+        TXT  = self.C_TXT
+        MUTED = self.C_MUTED
 
-        for dept, count in dept_rows:
-            row = ctk.CTkFrame(card2, fg_color="transparent")
-            row.pack(fill="x", padx=20, pady=5)
-            ctk.CTkLabel(row, text=(dept or "Unassigned"), font=self.main_font, text_color="#6b7280").pack(side="left")
-            ctk.CTkLabel(row, text=str(count), font=self.bold_font, text_color="#10b981").pack(side="right")
+        def style_ax(ax, fig):
+            fig.patch.set_facecolor(SURF)
+            ax.set_facecolor(BG)
+            ax.tick_params(colors=TXT, labelsize=9)
+            for spine in ax.spines.values():
+                spine.set_color("#1e3a5f")
+            ax.xaxis.label.set_color(MUTED)
+            ax.yaxis.label.set_color(MUTED)
+            ax.title.set_color(TXT)
+
+        def section_title(parent, text):
+            row = tk.Frame(parent, bg=BG)
+            row.pack(anchor="w", padx=24, pady=(18, 8), fill="x")
+            tk.Frame(row, bg=GOLD, width=3).pack(side="left", fill="y")
+            tk.Label(row, text=f"  {text}", bg=BG, fg=TXT,
+                     font=("Segoe UI", 13, "bold")).pack(side="left")
+
+        def embed_chart(parent, fig):
+            canvas = FigureCanvasTkAgg(fig, master=parent)
+            canvas.draw()
+            canvas.get_tk_widget().pack(fill="x", padx=24, pady=(0, 6))
+
+        def fmt(val):
+            return f"PKR {val:,.0f}" if val is not None else "N/A"
+
+        # ══ SECTION 1 — Salary Overview cards ════════════════
+        section_title(scroll_frame, "Salary Overview")
+
+        cards_row = tk.Frame(scroll_frame, bg=BG)
+        cards_row.pack(fill="x", padx=24, pady=(0, 4))
+
+        stat_items = [
+            ("Highest Salary", fmt(max_s), "#15803d"),
+            ("Lowest Salary",  fmt(min_s), "#b91c1c"),
+            ("Average Salary", fmt(avg_s), GOLD),
+            ("Total Expense",  fmt(sum_s), "#0369a1"),
+        ]
+        for label, value, accent in stat_items:
+            card = tk.Frame(cards_row, bg=SURF)
+            card.pack(side="left", expand=True, fill="x", padx=(0, 10), ipady=10, ipadx=10)
+            tk.Frame(card, bg=accent, height=3).pack(fill="x")
+            tk.Label(card, text=label, bg=SURF, fg=MUTED,
+                     font=("Segoe UI", 9)).pack(anchor="w", padx=12, pady=(8, 2))
+            tk.Label(card, text=value, bg=SURF, fg=accent,
+                     font=("Segoe UI", 11, "bold")).pack(anchor="w", padx=12, pady=(0, 8))
+
+        # ══ SECTION 2 — Two charts side by side ══════════════
+        section_title(scroll_frame, "Department Analytics")
+
+        row2 = tk.Frame(scroll_frame, bg=BG)
+        row2.pack(fill="x", padx=24, pady=(0, 6))
+
+        # Chart A — Pie: Department headcount
+        dept_names  = [r[0] or "N/A" for r in dept_rows]
+        dept_counts = [r[1] for r in dept_rows]
+
+        PALETTE = ["#c9a227", "#15803d", "#0369a1", "#7c3aed",
+                   "#b91c1c", "#0891b2", "#92400e", "#065f46",
+                   "#4338ca", "#be185d"]
+
+        fig_pie = Figure(figsize=(4.6, 3.4), dpi=96)
+        ax_pie  = fig_pie.add_subplot(111)
+        wedges, texts, autotexts = ax_pie.pie(
+            dept_counts,
+            labels=None,
+            autopct="%1.0f%%",
+            startangle=140,
+            colors=PALETTE[:len(dept_names)],
+            pctdistance=0.75,
+            wedgeprops={"linewidth": 1.5, "edgecolor": SURF}
+        )
+        for at in autotexts:
+            at.set_color(BG)
+            at.set_fontsize(8)
+            at.set_fontweight("bold")
+        ax_pie.set_title("Headcount by Department", fontsize=10, pad=10)
+        ax_pie.legend(wedges, dept_names, loc="lower center",
+                      bbox_to_anchor=(0.5, -0.22), ncol=3,
+                      fontsize=7, framealpha=0,
+                      labelcolor=TXT)
+        style_ax(ax_pie, fig_pie)
+        fig_pie.tight_layout()
+
+        pie_frame = tk.Frame(row2, bg=SURF)
+        pie_frame.pack(side="left", fill="both", expand=True, padx=(0, 8))
+        c1 = FigureCanvasTkAgg(fig_pie, master=pie_frame)
+        c1.draw()
+        c1.get_tk_widget().pack(fill="both", expand=True, padx=4, pady=4)
+
+        # Chart B — Horizontal bar: Avg salary per department
+        avg_depts   = [r[0] or "N/A" for r in dept_avg_rows]
+        avg_salaries = [float(r[1]) for r in dept_avg_rows]
+
+        fig_avg = Figure(figsize=(4.6, 3.4), dpi=96)
+        ax_avg  = fig_avg.add_subplot(111)
+        bars = ax_avg.barh(avg_depts, avg_salaries,
+                           color=PALETTE[:len(avg_depts)],
+                           edgecolor=SURF, linewidth=0.8)
+        ax_avg.set_xlabel("Avg Salary (PKR)", fontsize=8)
+        ax_avg.set_title("Avg Salary by Department", fontsize=10, pad=10)
+        ax_avg.xaxis.set_major_formatter(
+            mticker.FuncFormatter(lambda x, _: f"{x/1000:.0f}K")
+        )
+        ax_avg.tick_params(axis="y", labelsize=8)
+        ax_avg.tick_params(axis="x", labelsize=8)
+        ax_avg.grid(axis="x", color="#1e3a5f", linewidth=0.5, linestyle="--")
+        ax_avg.set_axisbelow(True)
+        # Value labels on bars
+        for bar, val in zip(bars, avg_salaries):
+            ax_avg.text(bar.get_width() + max(avg_salaries) * 0.01,
+                        bar.get_y() + bar.get_height() / 2,
+                        f"{val/1000:.0f}K",
+                        va="center", ha="left",
+                        color=GOLD, fontsize=7, fontweight="bold")
+        style_ax(ax_avg, fig_avg)
+        fig_avg.tight_layout()
+
+        avg_frame = tk.Frame(row2, bg=SURF)
+        avg_frame.pack(side="right", fill="both", expand=True)
+        c2 = FigureCanvasTkAgg(fig_avg, master=avg_frame)
+        c2.draw()
+        c2.get_tk_widget().pack(fill="both", expand=True, padx=4, pady=4)
+
+        # ══ SECTION 3 — Two more charts ═══════════════════════
+        section_title(scroll_frame, "Workforce & Salary Distribution")
+
+        row3 = tk.Frame(scroll_frame, bg=BG)
+        row3.pack(fill="x", padx=24, pady=(0, 6))
+
+        # Chart C — Bar: Gender distribution
+        genders = [r[0] or "N/A" for r in gender_rows]
+        g_counts = [r[1] for r in gender_rows]
+        g_colors = {"Male": "#0369a1", "Female": "#be185d", "Other": GOLD}
+        bar_colors = [g_colors.get(g, GOLD) for g in genders]
+
+        fig_gen = Figure(figsize=(4.6, 3.2), dpi=96)
+        ax_gen  = fig_gen.add_subplot(111)
+        b = ax_gen.bar(genders, g_counts, color=bar_colors,
+                       edgecolor=SURF, linewidth=0.8, width=0.4)
+        ax_gen.set_title("Gender Distribution", fontsize=10, pad=10)
+        ax_gen.set_ylabel("Employees", fontsize=8)
+        ax_gen.grid(axis="y", color="#1e3a5f", linewidth=0.5, linestyle="--")
+        ax_gen.set_axisbelow(True)
+        ax_gen.yaxis.set_major_locator(mticker.MaxNLocator(integer=True))
+        for bar, val in zip(b, g_counts):
+            ax_gen.text(bar.get_x() + bar.get_width() / 2,
+                        bar.get_height() + 0.1,
+                        str(val), ha="center", va="bottom",
+                        color=TXT, fontsize=9, fontweight="bold")
+        style_ax(ax_gen, fig_gen)
+        fig_gen.tight_layout()
+
+        gen_frame = tk.Frame(row3, bg=SURF)
+        gen_frame.pack(side="left", fill="both", expand=True, padx=(0, 8))
+        c3 = FigureCanvasTkAgg(fig_gen, master=gen_frame)
+        c3.draw()
+        c3.get_tk_widget().pack(fill="both", expand=True, padx=4, pady=4)
+
+        # Chart D — Horizontal bar: Salary bands
+        band_labels = ["< 100K", "100K – 200K", "200K – 300K", "> 300K"]
+        band_vals   = [int(v or 0) for v in bands]
+        band_colors = ["#b91c1c", GOLD, "#0369a1", "#15803d"]
+
+        fig_band = Figure(figsize=(4.6, 3.2), dpi=96)
+        ax_band  = fig_band.add_subplot(111)
+        brs = ax_band.barh(band_labels, band_vals,
+                           color=band_colors, edgecolor=SURF,
+                           linewidth=0.8)
+        ax_band.set_title("Salary Band Distribution", fontsize=10, pad=10)
+        ax_band.set_xlabel("No. of Employees", fontsize=8)
+        ax_band.xaxis.set_major_locator(mticker.MaxNLocator(integer=True))
+        ax_band.grid(axis="x", color="#1e3a5f", linewidth=0.5, linestyle="--")
+        ax_band.set_axisbelow(True)
+        for bar, val in zip(brs, band_vals):
+            ax_band.text(bar.get_width() + 0.05,
+                         bar.get_y() + bar.get_height() / 2,
+                         str(val), va="center", ha="left",
+                         color=TXT, fontsize=9, fontweight="bold")
+        style_ax(ax_band, fig_band)
+        fig_band.tight_layout()
+
+        band_frame = tk.Frame(row3, bg=SURF)
+        band_frame.pack(side="right", fill="both", expand=True)
+        c4 = FigureCanvasTkAgg(fig_band, master=band_frame)
+        c4.draw()
+        c4.get_tk_widget().pack(fill="both", expand=True, padx=4, pady=4)
+
+        # ══ SECTION 4 — Top 5 Earners ═════════════════════════
+        section_title(scroll_frame, "Top 5 Earners")
+
+        top_frame = tk.Frame(scroll_frame, bg=SURF)
+        top_frame.pack(fill="x", padx=24, pady=(0, 24))
+
+        # Header row
+        hdr = tk.Frame(top_frame, bg="#080d18")
+        hdr.pack(fill="x")
+        for txt, w in [("Rank", 60), ("Name", 280), ("Salary", 200)]:
+            tk.Label(hdr, text=txt, bg="#080d18", fg=GOLD,
+                     font=("Segoe UI", 10, "bold"),
+                     width=w // 8, anchor="w").pack(side="left", padx=14, pady=8)
+
+        for rank, (name, sal) in enumerate(top5_rows, 1):
+            row_bg = SURF if rank % 2 == 0 else "#0a1220"
+            row = tk.Frame(top_frame, bg=row_bg)
+            row.pack(fill="x")
+            rank_color = [GOLD, "#94a3b8", "#92400e", TXT, TXT][rank - 1]
+            tk.Label(row, text=f"#{rank}", bg=row_bg, fg=rank_color,
+                     font=("Segoe UI", 10, "bold"),
+                     width=6, anchor="w").pack(side="left", padx=14, pady=7)
+            tk.Label(row, text=name, bg=row_bg, fg=TXT,
+                     font=("Segoe UI", 10),
+                     width=28, anchor="w").pack(side="left", padx=4, pady=7)
+            tk.Label(row, text=f"PKR {float(sal):,.0f}", bg=row_bg, fg=GOLD,
+                     font=("Segoe UI", 10, "bold"),
+                     anchor="w").pack(side="left", padx=4, pady=7)
 
     # ─────────────────────────────────────────────────────────
     #  EXPORT
